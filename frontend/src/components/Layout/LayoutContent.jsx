@@ -69,16 +69,18 @@ const countryData = [
 		visaInfoRu:
 			'с 01.02.2019 года до 30 суток с электронной въездной визой (e-viza.gov.uz). ',
 		visaInfoEn:
+			'Starting from February 1, 2019, entry is allowed for up to 30 days with an electronic visa (e-visa.gov.uz).',
+		legalBasisUz: `O’zbekiston Respublikasi Prezidentining 05.01.2019 yildagi PF-5611 sonli farmoni.`,
+		legalBasisRu: `Постановление Президента Республики Узбекистан 
+№ ПП-5611 от 05.01.2019 года. `,
+		legalBasisEn:
 			'According to the Presidential Decree of the Republic of Uzbekistan No. PF-5611 dated January 5, 2019',
-		legalBasisUz: "O'zbekiston va Turkiya o'rtasidagi ikki tomonlama kelishuv.",
-		legalBasisRu: 'Двустороннее соглашение между Узбекистаном и Турцией.',
-		legalBasisEn: 'Bilateral agreement between Uzbekistan and Türkiye.',
 	},
 	{
 		code: 'AND',
 		nameUz: 'Andorra knyazligi',
-		nameRu: 'Andorra',
-		nameEn: 'Republic of Türkiye',
+		nameRu: 'Андорра',
+		nameEn: 'Andorra',
 		visaInfoUz:
 			'01.02.2019 yildan boshlab 30 kungacha bir tomonlama vizasiz rejim.',
 		visaInfoRu:
