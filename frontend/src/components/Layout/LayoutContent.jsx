@@ -127,7 +127,7 @@ export default function LayoutContent({ language }) {
 				}
 
 				const response = await axios.get(
-					`http://localhost:5000/visa_regimes?lang=${apiLang}`
+					`https://visa-virtual-info-1.onrender.com/visa_regimes?lang=${apiLang}`
 				)
 				setCountries(response.data)
 			} catch (error) {

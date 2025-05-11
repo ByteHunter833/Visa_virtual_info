@@ -106,7 +106,7 @@ const CountryDetail = ({ language }) => {
 				}
 
 				const response = await axios.get(
-					`http://localhost:5000/visa_regimes/${code}?lang=${apiLang}`
+					`https://visa-virtual-info-1.onrender.com/visa_regimes/${code}?lang=${apiLang}`
 				)
 				setCountry(response.data)
 			} catch (error) {
