@@ -10,7 +10,7 @@ CORS(app)  # Разрешить CORS для фронтенда
 
 # Конфигурация базы данных
 # Используем PostgreSQL в продакшене, SQLite для локальной разработки
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///visa_regimes.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('postgresql://visa_regimes_user:uKtycpH3AU0rSKBevwI21gzCzZNg5Ylg@dpg-d0ga7gs9c44c73fd8ktg-a/visa_regimes', 'sqlite:///visa_regimes.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
