@@ -5,13 +5,13 @@ import {
 	Card,
 	Descriptions,
 	Layout,
+	Spin,
 	Typography,
+	message,
 } from 'antd'
-import React from 'react'
+import axios from 'axios'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-
-// Импортируем данные о странах
-import { countryData, countryFlags } from '../../data'
 
 const { Content } = Layout
 const { Title } = Typography
@@ -37,7 +37,8 @@ const headerStyle = {
 }
 
 const flagStyle = {
-	fontSize: '42px',
+	width: '42px',
+	height: '42px',
 	marginRight: '16px',
 }
 
@@ -57,6 +58,7 @@ const uiTexts = {
 		notFound: 'Davlat topilmadi',
 		home: 'Bosh sahifa',
 		countryDetails: 'Davlat haqida batafsil',
+		error: "Ma'lumotlarni yuklashda xatolik yuz berdi",
 	},
 	ru: {
 		back: 'Назад',
@@ -68,6 +70,7 @@ const uiTexts = {
 		notFound: 'Страна не найдена',
 		home: 'Главная',
 		countryDetails: 'Детали о стране',
+		error: 'Ошибка при загрузке данных',
 	},
 	en: {
 		back: 'Back',
@@ -79,51 +82,61 @@ const uiTexts = {
 		notFound: 'Country not found',
 		home: 'Home',
 		countryDetails: 'Country Details',
+		error: 'Error loading data',
 	},
 }
 
 const CountryDetail = ({ language }) => {
-	// Получаем код страны из URL параметра
 	const { code } = useParams()
+	const [country, setCountry] = useState(null)
+	const [loading, setLoading] = useState(false)
 
-	// Находим данные страны по коду
-	const country = countryData.find(c => c.code === code)
+	// Загрузка данных с API
+	useEffect(() => {
+		const fetchCountryData = async () => {
+			setLoading(true)
+			try {
+				const apiLang =
+					language === 'ru' ? 'rus' : language === 'uz' ? 'uz' : null
+				if (!apiLang) {
+					setCountry(null)
+					setLoading(false)
+					message.warning(uiTexts[language].notFound)
+					return
+				}
 
-	// Получение локализованных данных
-	const getCountryName = () => {
-		if (!country) return ''
-		switch (language) {
-			case 'uz':
-				return country.nameUz
-			case 'ru':
-				return country.nameRu
-			default:
-				return country.nameEn
+				const response = await axios.get(
+					`http://localhost:5000/visa_regimes/${code}?lang=${apiLang}`
+				)
+				setCountry(response.data)
+			} catch (error) {
+				message.error(uiTexts[language].error)
+				console.error('Error fetching country data:', error)
+				setCountry(null)
+			} finally {
+				setLoading(false)
+			}
 		}
-	}
 
-	const getVisaInfo = () => {
-		if (!country) return ''
-		switch (language) {
-			case 'uz':
-				return country.visaInfoUz
-			case 'ru':
-				return country.visaInfoRu
-			default:
-				return country.visaInfoEn
-		}
-	}
+		fetchCountryData()
+	}, [code, language])
 
-	const getLegalBasis = () => {
-		if (!country) return ''
-		switch (language) {
-			case 'uz':
-				return country.legalBasisUz
-			case 'ru':
-				return country.legalBasisRu
-			default:
-				return country.legalBasisEn
-		}
+	// Если данные загружаются
+	if (loading) {
+		return (
+			<Content style={contentStyle}>
+				<Button
+					icon={<ArrowLeftOutlined />}
+					style={backButtonStyle}
+					type='primary'
+				>
+					<Link to='/'>{uiTexts[language].back}</Link>
+				</Button>
+				<div style={{ textAlign: 'center', padding: '40px 0' }}>
+					<Spin size='large' />
+				</div>
+			</Content>
+		)
 	}
 
 	// Если страна не найдена
@@ -137,7 +150,6 @@ const CountryDetail = ({ language }) => {
 				>
 					<Link to='/'>{uiTexts[language].back}</Link>
 				</Button>
-
 				<Card style={cardStyle}>
 					<Title level={3}>{uiTexts[language].notFound}</Title>
 				</Card>
@@ -153,7 +165,7 @@ const CountryDetail = ({ language }) => {
 				items={[
 					{ title: <Link to='/'>{uiTexts[language].home}</Link> },
 					{ title: uiTexts[language].countryDetails },
-					{ title: getCountryName() },
+					{ title: country.country_name },
 				]}
 			/>
 
@@ -171,11 +183,21 @@ const CountryDetail = ({ language }) => {
 				style={cardStyle}
 				title={
 					<div style={headerStyle}>
-						<div style={flagStyle}>{countryFlags[country.code]}</div>
+						<div style={flagStyle}>
+							{country.flag_url ? (
+								<img
+									src={country.flag_url}
+									alt={`${country.country_code} flag`}
+									style={flagStyle}
+								/>
+							) : (
+								<span style={flagStyle}>🌐</span>
+							)}
+						</div>
 						<div>
-							<div>{country.code}</div>
+							<div>{country.country_code}</div>
 							<Title level={3} style={{ margin: 0 }}>
-								{getCountryName()}
+								{country.country_name}
 							</Title>
 						</div>
 					</div>
@@ -183,15 +205,13 @@ const CountryDetail = ({ language }) => {
 			>
 				<Descriptions bordered column={1} labelStyle={{ fontWeight: 'bold' }}>
 					<Descriptions.Item label={uiTexts[language].country}>
-						{getCountryName()}
+						{country.country_name}
 					</Descriptions.Item>
-
 					<Descriptions.Item label={uiTexts[language].visaInfo}>
-						{getVisaInfo()}
+						{country.visa_policy}
 					</Descriptions.Item>
-
 					<Descriptions.Item label={uiTexts[language].legalBasis}>
-						{getLegalBasis()}
+						{country.visa_policy}
 					</Descriptions.Item>
 				</Descriptions>
 			</Card>

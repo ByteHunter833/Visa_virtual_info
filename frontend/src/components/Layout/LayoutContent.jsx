@@ -1,16 +1,14 @@
 import { SearchOutlined } from '@ant-design/icons'
-import { Card, Col, Empty, Input, Row } from 'antd'
+import { Button, Card, Col, Empty, Input, Row, Spin, message } from 'antd'
 import Layout from 'antd/es/layout/layout'
-import { useState } from 'react'
+import axios from 'axios'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-// Импортируем данные из отдельного файла
-import { countryData, countryFlags } from '../../data'
 
 const contentStyle = {
 	padding: '20px',
-	minHeight: 'calc(100vh - 120px)', // 60px header + 60px footer
-	backgroundColor: '#f0f2f5', // Светло-серый фон как в типичном Ant Design
+	minHeight: 'calc(100vh - 120px)',
+	backgroundColor: '#f0f2f5',
 }
 
 const searchContainerStyle = {
@@ -46,6 +44,8 @@ const countryCodeStyle = {
 const countryFlagStyle = {
 	marginRight: '8px',
 	fontSize: '20px',
+	width: '20px',
+	height: '20px',
 }
 
 const countryNameStyle = {
@@ -68,10 +68,18 @@ const viewMoreStyle = {
 	fontWeight: '500',
 }
 
+const showMoreButtonStyle = {
+	display: 'block',
+	margin: '20px auto',
+}
+
 export default function LayoutContent({ language }) {
 	const [searchQuery, setSearchQuery] = useState('')
+	const [countries, setCountries] = useState([])
+	const [loading, setLoading] = useState(false)
+	const [visibleCount, setVisibleCount] = useState(6) // Показываем 6 карточек по умолчанию
 
-	// Тексты для элементов интерфейса на разных языках
+	// Тексты для интерфейса
 	const uiTexts = {
 		uz: {
 			title: "Viza ma'lumotlari portali",
@@ -80,6 +88,8 @@ export default function LayoutContent({ language }) {
 			noResults: "Hech qanday ma'lumot topilmadi",
 			languageSelect: 'Tilni tanlang',
 			viewMore: "Batafsil ko'rish",
+			showMore: "Ko'proq ko'rsatish",
+			error: "Ma'lumotlarni yuklashda xatolik yuz berdi",
 		},
 		ru: {
 			title: 'Портал визовой информации',
@@ -88,6 +98,8 @@ export default function LayoutContent({ language }) {
 			noResults: 'Информация не найдена',
 			languageSelect: 'Выберите язык',
 			viewMore: 'Подробнее',
+			showMore: 'Показать больше',
+			error: 'Ошибка при загрузке данных',
 		},
 		en: {
 			title: 'Visa Information Portal',
@@ -96,57 +108,56 @@ export default function LayoutContent({ language }) {
 			noResults: 'No information found',
 			languageSelect: 'Select language',
 			viewMore: 'View details',
+			showMore: 'Show more',
+			error: 'Error loading data',
 		},
 	}
 
+	// Загрузка данных с API
+	useEffect(() => {
+		const fetchData = async () => {
+			setLoading(true)
+			try {
+				const apiLang =
+					language === 'ru' ? 'rus' : language === 'uz' ? 'uzb' : null
+				if (!apiLang) {
+					setCountries([])
+					setLoading(false)
+					return
+				}
+
+				const response = await axios.get(
+					`http://localhost:5000/visa_regimes?lang=${apiLang}`
+				)
+				setCountries(response.data)
+			} catch (error) {
+				message.error(uiTexts[language].error)
+				console.error('Error fetching data:', error)
+				setCountries([])
+			} finally {
+				setLoading(false)
+			}
+		}
+
+		fetchData()
+	}, [language])
+
 	// Фильтрация стран на основе поискового запроса
-	const filteredCountries = countryData.filter(country => {
+	const filteredCountries = countries.filter(country => {
 		const query = searchQuery.toLowerCase()
 		if (!query) return true
-
-		const nameField = `name${
-			language.charAt(0).toUpperCase() + language.slice(1)
-		}`
 		return (
-			country.code.toLowerCase().includes(query) ||
-			country[nameField].toLowerCase().includes(query)
+			country.country_code.toLowerCase().includes(query) ||
+			country.country_name.toLowerCase().includes(query)
 		)
 	})
 
-	// Получение названия страны на основе текущего языка
-	const getCountryName = country => {
-		switch (language) {
-			case 'uz':
-				return country.nameUz
-			case 'ru':
-				return country.nameRu
-			default:
-				return country.nameEn
-		}
-	}
+	// Показываем только visibleCount карточек
+	const visibleCountries = filteredCountries.slice(0, visibleCount)
 
-	// Получение информации о визе на основе текущего языка
-	const getVisaInfo = country => {
-		switch (language) {
-			case 'uz':
-				return country.visaInfoUz
-			case 'ru':
-				return country.visaInfoRu
-			default:
-				return country.visaInfoEn
-		}
-	}
-
-	// Получение юридического основания на основе текущего языка
-	const getLegalBasis = country => {
-		switch (language) {
-			case 'uz':
-				return country.legalBasisUz
-			case 'ru':
-				return country.legalBasisRu
-			default:
-				return country.legalBasisEn
-		}
+	// Обработчик кнопки "Показать больше"
+	const handleShowMore = () => {
+		setVisibleCount(prev => prev + 6) // Показываем ещё 6 карточек
 	}
 
 	return (
@@ -163,49 +174,70 @@ export default function LayoutContent({ language }) {
 				/>
 			</div>
 
-			{/* Карточки стран */}
-			<Row gutter={[16, 16]}>
-				{filteredCountries.length > 0 ? (
-					filteredCountries.map(country => (
-						<Col xs={24} sm={12} lg={8} key={country.code}>
-							<Link
-								to={`/country/${country.code}`}
-								style={{ textDecoration: 'none' }}
-							>
-								<Card bordered={false} style={countryCardStyle} hoverable>
-									<div style={countryHeaderStyle}>
-										<div style={countryCodeStyle}>
-											<span style={countryFlagStyle}>
-												{countryFlags[country.code]}
-											</span>
-											{country.code}
+			{/* Индикатор загрузки или карточки стран */}
+			{loading ? (
+				<div style={{ textAlign: 'center', padding: '40px 0' }}>
+					<Spin size='large' />
+				</div>
+			) : (
+				<Row gutter={[16, 16]}>
+					{visibleCountries.length > 0 ? (
+						visibleCountries.map(country => (
+							<Col xs={24} sm={12} lg={8} key={country.country_code}>
+								<Link
+									to={`/country/${country.country_code}`}
+									style={{ textDecoration: 'none' }}
+								>
+									<Card bordered={false} style={countryCardStyle} hoverable>
+										<div style={countryHeaderStyle}>
+											<div style={countryCodeStyle}>
+												{country.flag_url ? (
+													<img
+														src={country.flag_url}
+														alt={`${country.country_code} flag`}
+														style={countryFlagStyle}
+													/>
+												) : (
+													<span style={countryFlagStyle}>🌐</span>
+												)}
+												{country.country_code}
+											</div>
+											<div style={countryNameStyle}>{country.country_name}</div>
 										</div>
-										<div style={countryNameStyle}>
-											{getCountryName(country)}
-										</div>
-									</div>
 
-									<div>
-										<div>{getVisaInfo(country)}</div>
-										<div style={legalBasisStyle}>
-											<strong>***{uiTexts[language].legalBasis}***:</strong>{' '}
-											{getLegalBasis(country).substring(0, 100)}
-											{getLegalBasis(country).length > 100 ? '...' : ''}
+										<div>
+											<div>{country.visa_policy}</div>
+											<div style={legalBasisStyle}>
+												<strong>***{uiTexts[language].legalBasis}***:</strong>{' '}
+												{country.visa_policy.substring(0, 100)}
+												{country.visa_policy.length > 100 ? '...' : ''}
+											</div>
+											<div style={viewMoreStyle}>
+												{uiTexts[language].viewMore} →
+											</div>
 										</div>
-										<div style={viewMoreStyle}>
-											{uiTexts[language].viewMore} →
-										</div>
-									</div>
-								</Card>
-							</Link>
+									</Card>
+								</Link>
+							</Col>
+						))
+					) : (
+						<Col span={24} style={{ textAlign: 'center', padding: '40px 0' }}>
+							<Empty description={uiTexts[language].noResults} />
 						</Col>
-					))
-				) : (
-					<Col span={24} style={{ textAlign: 'center', padding: '40px 0' }}>
-						<Empty description={uiTexts[language].noResults} />
-					</Col>
-				)}
-			</Row>
+					)}
+				</Row>
+			)}
+
+			{/* Кнопка "Показать больше" */}
+			{!loading && visibleCount < filteredCountries.length && (
+				<Button
+					type='primary'
+					style={showMoreButtonStyle}
+					onClick={handleShowMore}
+				>
+					{uiTexts[language].showMore}
+				</Button>
+			)}
 		</Layout.Content>
 	)
 }
