@@ -1,18 +1,17 @@
 from flask import Flask, jsonify, request, url_for
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 import pandas as pd
 from uuid import uuid4
 import os
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
-# Конфигурация базы данных (SQLite)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///visa_regimes.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+CORS(app)  # Разрешить CORS для фронтенда
 
-# Папка для статических файлов (флагов)
-app.config['STATIC_FOLDER'] = 'static'
+# Конфигурация базы данных
+# Используем PostgreSQL в продакшене, SQLite для локальной разработки
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///visa_regimes.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
@@ -29,17 +28,14 @@ class VisaRegime(db.Model):
 
     def to_dict(self):
         code = self.country_code.lower()
-        print(code[:2])
-        flag_url = f"https://flagcdn.com/56x42/{code[:2] if len(code) == 3 else code}.png"
-
-
+        flag_url = f"https://flagcdn.com/56x42/{code[:2] if len(code) == 3 else code[:2]}.png"
         return {
-        'id': self.id,
-        'country_code': self.country_code,
-        'country_name': self.country_name,
-        'visa_policy': self.visa_policy,
-        'language': self.language,
-        'flag_url': flag_url
+            'id': self.id,
+            'country_code': self.country_code,
+            'country_name': self.country_name,
+            'visa_policy': self.visa_policy,
+            'language': self.language,
+            'flag_url': flag_url
         }
 
 # Функция для очистки строковых данных
@@ -52,31 +48,25 @@ def clean_string(value):
 @app.route('/upload', methods=['POST'])
 def upload_data():
     try:
-        # Чтение узбекского файла
         df_uzb = pd.read_excel("O`zbek tili.xlsx", engine='openpyxl')
         df_uzb.columns = ['country_code', 'country_name', 'visa_policy']
         df_uzb['language'] = 'uzb'
 
-        # Чтение русского файла
         df_rus = pd.read_excel("Rus tili.xlsx", engine='openpyxl')
         df_rus.columns = ['country_code', 'country_name', 'visa_policy']
         df_rus['language'] = 'rus'
 
-        # Объединение данных
         df = pd.concat([df_uzb, df_rus], ignore_index=True)
 
-        # Очистка данных
         df['country_code'] = df['country_code'].apply(clean_string)
         df['country_name'] = df['country_name'].apply(clean_string)
         df['visa_policy'] = df['visa_policy'].apply(clean_string)
         df = df.dropna(how='all')
 
-        # Удаление существующих данных
         with app.app_context():
             db.session.query(VisaRegime).delete()
             db.session.commit()
 
-        # Загрузка данных в базу
         for _, row in df.iterrows():
             visa_regime = VisaRegime(
                 country_code=row['country_code'],
@@ -93,7 +83,7 @@ def upload_data():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# Маршрут для получения всех данных на указанном языке
+# Маршрут для получения всех данных
 @app.route('/visa_regimes', methods=['GET'])
 def get_visa_regimes():
     lang = request.args.get('lang')
@@ -105,7 +95,7 @@ def get_visa_regimes():
     regimes = VisaRegime.query.filter_by(language=lang).all()
     return jsonify([regime.to_dict() for regime in regimes])
 
-# Маршрут для получения данных по конкретной стране
+# Маршрут для получения данных по стране
 @app.route('/visa_regimes/<code>', methods=['GET'])
 def get_visa_regime_by_code(code):
     lang = request.args.get('lang')
@@ -120,7 +110,7 @@ def get_visa_regime_by_code(code):
 
     return jsonify(regime.to_dict())
 
-# Создание базы данных и таблиц
+# Инициализация базы данных
 with app.app_context():
     db.create_all()
 
