@@ -11,7 +11,7 @@ function App() {
 	// Используем localStorage для хранения выбранного языка
 	const [language, setLanguage] = useState(() => {
 		// Получаем сохраненный язык из localStorage или используем значение по умолчанию
-		return localStorage.getItem('selectedLanguage') || 'en'
+		return localStorage.getItem('selectedLanguage') || 'uz'
 	})
 
 	// Сохраняем язык в localStorage при его изменении
